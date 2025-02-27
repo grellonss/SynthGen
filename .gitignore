@@ -1,10 +1,10 @@
 # Ignora la directory dell'ambiente virtuale
 env/
 
-# Ignora i file Python compilati
-__pycache__/
-*.pyc
-
-# Ignora le directory specifiche degli editor
-.idea/
-.vscode/
+# Ignora altre directory e file non necessari
+*.log
+*.csv
+*.dat
+node_modules/
+dist/
+build/
