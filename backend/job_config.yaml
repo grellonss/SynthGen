@@ -1,0 +1,21 @@
+job_name: Generazione dati sensori
+model: CTGAN  # Puoi usare anche 'GaussianCopula' o un altro modello SDV
+num_samples: 100  # Numero di record da generare
+config:
+  sensor_data:
+    fields:
+      id_macchina:
+        type: categorical
+        values:
+          - "65f850b321e42e5ffa7cf088"
+          - "65f850b321e42e5ffa7cf089"
+      nome_parametro:
+        type: categorical
+        values:
+          - "PV10_TemperaturaMotore"
+          - "PV02_PressioneOlio"
+          - "PV03_LivelloCarburante"
+      valore:
+        type: float
+        min: 0.0
+        max: 100.0

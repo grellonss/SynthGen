@@ -1,10 +1,24 @@
-# Ignora la directory dell'ambiente virtuale
-env/
+# Evita di includere l'ambiente virtuale
+sdv-env/
+venv/
 
-# Ignora altre directory e file non necessari
+# Evita di includere file di sistema
+.DS_Store
+Thumbs.db
+
+# Evita di includere file di log e cache
 *.log
+__pycache__/
+*.pyc
+*.pyo
+
+# Escludi database e dati generati
+*.db
+*.sqlite
 *.csv
-*.dat
+data/
+dump/
+
+# Evita di includere le dipendenze installate
 node_modules/
-dist/
-build/
+*.lock

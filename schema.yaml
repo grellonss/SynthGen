@@ -1,0 +1,19 @@
+sensor_data:
+  fields:
+    _id:
+      type: categorical
+    createdAt:
+      type: datetime
+    data_registrazione:
+      type: datetime
+    id_macchina:
+      type: categorical
+    nome_parametro:
+      type: categorical
+    tipo_dato:
+      type: categorical
+    updatedAt:
+      type: datetime
+    valore:
+      type: float
+  primary_key: _id
