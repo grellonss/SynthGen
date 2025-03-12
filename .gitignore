@@ -22,3 +22,7 @@ dump/
 # Evita di includere le dipendenze installate
 node_modules/
 *.lock
+
+# Ignora i file grandi di Torch
+*.dll
+*.lib
