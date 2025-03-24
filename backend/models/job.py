@@ -1,5 +1,5 @@
 import uuid
-import datetime
+from datetime import datetime, timezone
 from pymongo import MongoClient
 
 # Connessione a MongoDB
@@ -11,19 +11,22 @@ jobs_collection = db["jobs"]
 def create_job(config):
     # Genera un ID unico per il job
     job_id = str(uuid.uuid4())
-    
+
     # Prepara i dati del job
     job_data = {
-        "job_id": job_id,
+        "job_id": job_id,  # Aggiungi un campo job_id unico
         "config": config,  # Configurazione YAML del job
-        "status": "Inizializzato",  # Stato iniziale
-        "created_at": datetime.datetime.utcnow(),
-        "updated_at": datetime.datetime.utcnow()
+        "status": "Initialized",  # Stato iniziale
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
     }
-    
-    # Inserisce il job nel database
-    jobs_collection.insert_one(job_data)
-    
+
+    # Inserisce il job nel database e ottiene l'ID MongoDB generato
+    inserted_job = jobs_collection.insert_one(job_data)
+
+    # Recupera il job appena inserito con il campo _id di MongoDB
+    job_data["_id"] = str(inserted_job.inserted_id)  # Aggiungi l'_id generato
+
     return job_data
 
 # Funzione per ottenere tutti i job

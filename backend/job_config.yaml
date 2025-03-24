@@ -1,21 +1,28 @@
-job_name: Generazione dati sensori
-model: CTGAN  # Puoi usare anche 'GaussianCopula' o un altro modello SDV
-num_samples: 100  # Numero di record da generare
 config:
-  sensor_data:
-    fields:
-      id_macchina:
-        type: categorical
-        values:
-          - "65f850b321e42e5ffa7cf088"
-          - "65f850b321e42e5ffa7cf089"
-      nome_parametro:
-        type: categorical
-        values:
-          - "PV10_TemperaturaMotore"
-          - "PV02_PressioneOlio"
-          - "PV03_LivelloCarburante"
-      valore:
-        type: float
-        min: 0.0
-        max: 100.0
+  input:
+    sources:
+      - type: rest_api
+        url: http://localhost:5000/api/sensors  # API che restituisce i dati reali
+        method: GET
+        format: json
+
+  data_generation:
+    plugin: synthetic_data_generator
+    parameters:
+      model: CTGAN  # Puoi usare anche 'GaussianCopula' o un altro modello SDV
+      num_samples: 200  # Numero di dati sintetici da generare
+      random_seed: 42  # Fissa un seed per riprodurre risultati coerenti
+      augmentation: true  # Migliora la varietà dei dati generati
+
+  output:
+    targets:
+      - type: local
+        path: ./generated_synthetic_data.csv  # Salva i dati in un file CSV
+        format: csv
+      - type: database
+        connection_string: "mongodb://localhost:27017"
+        collection: sensor_data  # Salva i dati generati in MongoDB
+      - type: rest_api
+        url: http://localhost:5000/api/sensors/upload  # API per inviare i dati generati
+        method: POST
+        format: json
