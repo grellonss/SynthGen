@@ -16,9 +16,6 @@ config:
 
   output:
     targets:
-      - type: local
-        path: ./generated_synthetic_data.csv  # Salva i dati in un file CSV
-        format: csv
       - type: database
         connection_string: "mongodb://localhost:27017"
         collection: sensor_data  # Salva i dati generati in MongoDB

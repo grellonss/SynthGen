@@ -5,7 +5,7 @@ import yaml
 import json
 from backend.models.job import create_job, get_all_jobs, get_job_by_id
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime,timezone
 from flask_socketio import SocketIO
 import time
 from ..models.job import jobs_collection, db
@@ -78,48 +78,57 @@ def get_job_status(job_id):
 
 # 📌 Esecuzione del job in background
 def run_job_in_background(job_id):
-    print(f"🧪 Job ID ricevuto: {job_id}")
     try:
         job = get_job_by_id(job_id)
         if not job:
             print(f"❌ Job {job_id} non trovato!")
             return
         
-        print("🔍 Job recuperato:", job)
-
-        jobs_collection.update_one({"job_id": job_id}, {"$set": {"status": "Running"}})
+        jobs_collection.update_one({"job_id": job_id}, {"$set": {"status": "Running","started_at": datetime.now(timezone.utc)}})
         if socketio:
-            socketio.emit("job_status_update", {"job_id": job_id, "status": "Running"})
+            socketio.emit("job_status_update", {"job_id": job_id, "status": "Running", "started_at": datetime.now(timezone.utc).isoformat()})
 
         config = job.get("config", {}).get("config", {})
-        print("📦 Config estratta:", config)
 
         data_gen = config.get("data_generation", {})
         parameters = data_gen.get("parameters", {})
         model_name = parameters.get("model")
         num_samples = parameters.get("num_samples")
 
-        print(f"🛠️ Parametri estratti: modello={model_name}, campioni={num_samples}")
-
         if not model_name or not num_samples:
             raise KeyError("❌ model o num_samples mancante")
 
         print(f"🚀 Avvio generazione dati per job {job_id}...")
 
+        if socketio:
+            socketio.emit("job_progress_update", {"job_id": job_id, "progress": 10})
+
+        time.sleep(3.0) 
+
+        if socketio:
+            socketio.emit("job_progress_update", {"job_id": job_id, "progress": 40})
+
+        time.sleep(3.0) 
+
+        if socketio:
+            socketio.emit("job_progress_update", {"job_id": job_id, "progress": 70})
+
         generated_data = generate_synthetic_data(model_name, config, num_samples, job_id)
-        print(f"📥 Dati generati: {generated_data.shape}")
 
         save_synthetic_data(generated_data, job_id)
         print(f"✅ Dati salvati nel DB per job {job_id}")
 
-        jobs_collection.update_one({"job_id": job_id}, {"$set": {"status": "Completed"}})
         if socketio:
-            socketio.emit("job_status_update", {"job_id": job_id, "status": "Completed"})
+            socketio.emit("job_progress_update", {"job_id": job_id, "progress": 100})
 
-        print(f"✅ Job {job_id} completato con successo!")
+        jobs_collection.update_one({"job_id": job_id}, {"$set": {"status": "Completed", "completed_at": datetime.now(timezone.utc)}})
+        if socketio:
+            socketio.emit("job_status_update", {"job_id": job_id, "status": "Completed", "completed_at": datetime.now(timezone.utc).isoformat()})
+
+        print(f"✅ Job completed successfully!")
 
     except Exception as e:
-        print(f"❌ Errore durante l'esecuzione del job {job_id}: {e}")
+        print(f"❌ Error while executing job {job_id}: {e}")
         jobs_collection.update_one({"job_id": job_id}, {
             "$set": {"status": "Error", "error_message": str(e)}
         })

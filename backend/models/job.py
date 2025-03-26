@@ -34,6 +34,12 @@ def get_all_jobs():
     jobs = list(jobs_collection.find())  # Trova tutti i job
     for job in jobs:
         job["_id"] = str(job["_id"])  # Converte ObjectId in stringa
+        if "created_at" in job:
+            job["created_at"] = job["created_at"].isoformat()
+        if "started_at" in job:
+            job["started_at"] = job["started_at"].isoformat()
+        if "completed_at" in job:
+            job["completed_at"] = job["completed_at"].isoformat()
     return jobs
 
 # Funzione per ottenere un job per ID

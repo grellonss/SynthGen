@@ -85,4 +85,4 @@ app.register_blueprint(sensor_api, url_prefix="/api")  # Ora i sensori saranno s
 # 📌 Avvio del server Flask sulla porta 5000
 if __name__ == "__main__":
     print("✅ Avviando il server Flask con SocketIO...")
-    socketio.run(app, debug=True, host="127.0.0.1", port=5000)
+    socketio.run(app, host="127.0.0.1", port=5000)

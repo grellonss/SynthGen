@@ -1,5 +1,6 @@
 import pymongo
 import pandas as pd
+import os
 import time
 from sdv.single_table import CTGANSynthesizer, GaussianCopulaSynthesizer
 from sdv.metadata import SingleTableMetadata
@@ -22,11 +23,11 @@ def generate_synthetic_data(model_name, config, num_samples, job_id):
     df = pd.DataFrame(data)
     print(f"📊 Dataset reale caricato: {df.shape[0]} righe, {df.shape[1]} colonne.")
 
-    # ✅ Crea i metadata in automatico
+    # Crea i metadata in automatico
     metadata = SingleTableMetadata()
     metadata.detect_from_dataframe(df)
 
-    # ✅ Seleziona e inizializza il modello con metadata
+    # Seleziona e inizializza il modello con metadata
     if model_name == "CTGAN":
         model = CTGANSynthesizer(metadata, verbose=True, epochs=100)
     elif model_name == "GaussianCopula":
@@ -44,7 +45,7 @@ def generate_synthetic_data(model_name, config, num_samples, job_id):
     synthetic_data = model.sample(num_rows=num_samples)
     print(f"✅ Dati sintetici generati: {synthetic_data.shape[0]} righe")
 
-    # 📈 Valutazione della qualità dei dati sintetici
+    # Valutazione della qualità dei dati sintetici
     print("📈 Valutazione della qualità dei dati sintetici...")
     report = QualityReport()
     report.generate(real_data=df, synthetic_data=synthetic_data, metadata=metadata.to_dict())
@@ -61,5 +62,14 @@ def generate_synthetic_data(model_name, config, num_samples, job_id):
     synthetic_collection.insert_many(synthetic_data_records)
 
     print(f"✅ Dati sintetici salvati in MongoDB per il job {job_id}!")
+
+    # Salvataggio su file locale
+    output_dir = os.path.join(os.path.dirname(__file__), "output")
+    os.makedirs(output_dir, exist_ok=True)  # Crea la cartella se non esiste
+
+    output_path = os.path.join(output_dir, f"job_{job_id}.csv")
+    synthetic_data.to_csv(output_path, index=False)
+
+    print(f"📁 File CSV salvato in: {output_path}")
 
     return synthetic_data
