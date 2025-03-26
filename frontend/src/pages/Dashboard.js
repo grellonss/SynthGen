@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { socket } from "../services/socket"; // Importa socket
 import { getJobs, startJob } from "../services/api";
 import { useNavigate } from "react-router-dom"; // 🔹 Importa useNavigate
 import NewJobForm from "./NewJobForm";
@@ -11,10 +12,25 @@ function Dashboard() {
   const navigate = useNavigate(); // 🔹 Hook per navigare tra le pagine
 
   useEffect(() => {
+    // Connessione al server WebSocket
+    socket.connect();
+
+    // Primo fetch iniziale dei job dal backend
     fetchJobs();
-    const interval = setInterval(fetchJobs, 5000); // Ogni 5 secondi
-    return () => clearInterval(interval); // Pulizia al cambio pagina
-  }, []);  
+
+    // Ascolta gli aggiornamenti sullo stato del job
+    socket.on('job_status_update', (data) => {
+      console.log(`Job ${data.job_id} aggiornato a: ${data.status}`);
+      // Aggiorna lo stato del job
+      setJobs(prevJobs =>
+        prevJobs.map(job => job.job_id === data.job_id ? { ...job, status: data.status } : job)
+      );
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   async function fetchJobs() {
     try {
@@ -37,7 +53,9 @@ function Dashboard() {
     setLoadingJobs((prev) => ({ ...prev, [jobId]: true })); // Mostra il loader
 
     try {
-      await startJob(jobId);
+      // Avvia il job tramite WebSocket
+      socket.emit('start_job', { job_id: jobId });
+
       toast.success("✅ Job started successfully!", {
         position: "top-center",
         autoClose: 3000,
@@ -46,8 +64,6 @@ function Dashboard() {
         pauseOnHover: true,
         draggable: true,
       });
-
-      fetchJobs(); // Ricarica la lista dopo l'avvio
     } catch (error) {
       toast.error("❌ Error starting job!", {
         position: "top-center",
@@ -134,21 +150,21 @@ function Dashboard() {
       <Button 
         variant="contained"
         sx={{
-          position: "absolute", // 🔹 Posiziona il bottone
-          top: "1rem", // 🔹 Distanza dalla parte superiore
-          left: "1rem", // 🔹 Sposta il bottone a sinistra
-          width: "40px", // 🔹 Dimensione fissa
-          height: "40px", // 🔹 Altezza uguale alla larghezza (circolare)
+          position: "absolute", // Posiziona il bottone
+          top: "1rem", // Distanza dalla parte superiore
+          left: "1rem", // Sposta il bottone a sinistra
+          width: "40px", // Dimensione fissa
+          height: "40px", // Altezza uguale alla larghezza (circolare)
           minWidth: "40px",
-          borderRadius: "50%", // 🔹 Forma circolare
+          borderRadius: "50%", // Forma circolare
           backgroundColor: "#ff6f61", 
           "&:hover": { backgroundColor: "#d9534f" },
-          fontSize: "20px", // 🔹 Grandezza dell'icona ">"
+          fontSize: "20px", // Grandezza dell'icona ">"
           fontWeight: "bold",
           textAlign: "center",
           padding: "0",
         }}
-        onClick={() => navigate("/")} // 🔹 Naviga alla homepage
+        onClick={() => navigate("/")} // Naviga alla homepage
       >
         &lt;
       </Button>

@@ -1,5 +1,6 @@
 import pymongo
 import pandas as pd
+import time
 from sdv.single_table import CTGANSynthesizer, GaussianCopulaSynthesizer
 from sdv.metadata import SingleTableMetadata
 from sdmetrics.reports.single_table import QualityReport
@@ -27,7 +28,7 @@ def generate_synthetic_data(model_name, config, num_samples, job_id):
 
     # ✅ Seleziona e inizializza il modello con metadata
     if model_name == "CTGAN":
-        model = CTGANSynthesizer(metadata)
+        model = CTGANSynthesizer(metadata, verbose=True, epochs=100)
     elif model_name == "GaussianCopula":
         model = GaussianCopulaSynthesizer(metadata)
     else:
@@ -35,7 +36,8 @@ def generate_synthetic_data(model_name, config, num_samples, job_id):
 
     print("🚀 Avvio addestramento del modello SDV...")
     model.fit(df)
-    print("✅ Addestramento completato!")
+    start_time = time.time()
+    print(f"✅ Addestramento completato in {time.time() - start_time:.2f} secondi!")
 
     # Genera i dati sintetici
     print(f"🛠 Generazione di {num_samples} dati sintetici...")

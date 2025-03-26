@@ -6,11 +6,21 @@ import json
 from backend.models.job import create_job, get_all_jobs, get_job_by_id
 from bson import ObjectId
 from datetime import datetime
+from flask_socketio import SocketIO
+import time
 from ..models.job import jobs_collection, db
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from generate_synthetic_data import generate_synthetic_data
+
+# SocketIO instance placeholder
+socketio = None
+
+def set_socketio(sio):
+    """Collega l'istanza di SocketIO dall'app principale"""
+    global socketio
+    socketio = sio
 
 # Creiamo un Blueprint per le API relative ai job
 job_api = Blueprint('job_api', __name__)
@@ -66,42 +76,60 @@ def get_job_status(job_id):
     
     return jsonify(job)
 
+# 📌 Esecuzione del job in background
 def run_job_in_background(job_id):
-    """Esegue il job in un thread separato"""
+    print(f"🧪 Job ID ricevuto: {job_id}")
     try:
         job = get_job_by_id(job_id)
         if not job:
             print(f"❌ Job {job_id} non trovato!")
             return
         
-        # Aggiorna lo stato a "Running"
-        jobs_collection.update_one({"job_id": job_id}, {"$set": {"status": "Running"}})
+        print("🔍 Job recuperato:", job)
 
-        # Recupera la configurazione del job
+        jobs_collection.update_one({"job_id": job_id}, {"$set": {"status": "Running"}})
+        if socketio:
+            socketio.emit("job_status_update", {"job_id": job_id, "status": "Running"})
+
         config = job.get("config", {}).get("config", {})
+        print("📦 Config estratta:", config)
+
         data_gen = config.get("data_generation", {})
         parameters = data_gen.get("parameters", {})
         model_name = parameters.get("model")
         num_samples = parameters.get("num_samples")
 
+        print(f"🛠️ Parametri estratti: modello={model_name}, campioni={num_samples}")
+
         if not model_name or not num_samples:
-            raise KeyError("model o num_samples mancante")
+            raise KeyError("❌ model o num_samples mancante")
 
-        print(f"🚀 Avvio generazione dati per {job_id} - Modello: {model_name}, Campioni: {num_samples}")
-        
-        # Genera i dati
+        print(f"🚀 Avvio generazione dati per job {job_id}...")
+
         generated_data = generate_synthetic_data(model_name, config, num_samples, job_id)
+        print(f"📥 Dati generati: {generated_data.shape}")
 
-        # Salva i dati nel database
         save_synthetic_data(generated_data, job_id)
+        print(f"✅ Dati salvati nel DB per job {job_id}")
 
-        # Aggiorna lo stato a "Completed"
         jobs_collection.update_one({"job_id": job_id}, {"$set": {"status": "Completed"}})
+        if socketio:
+            socketio.emit("job_status_update", {"job_id": job_id, "status": "Completed"})
+
         print(f"✅ Job {job_id} completato con successo!")
 
     except Exception as e:
         print(f"❌ Errore durante l'esecuzione del job {job_id}: {e}")
-        jobs_collection.update_one({"job_id": job_id}, {"$set": {"status": "Error", "error_message": str(e)}})
+        jobs_collection.update_one({"job_id": job_id}, {
+            "$set": {"status": "Error", "error_message": str(e)}
+        })
+        if socketio:
+            socketio.emit("job_status_update", {
+                "job_id": job_id,
+                "status": "Error",
+                "error_message": str(e)
+            })
+
 
 @job_api.route('/jobs/<job_id>/start', methods=['POST'])
 def start_job(job_id):
@@ -153,3 +181,4 @@ def export_job_data(job_id):
     response.headers["Content-Disposition"] = f"attachment; filename=job_{job_id}_data.csv"
     
     return response
+
